@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#4F46E5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Shop-comp">
+<title>Shop-comp</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+  :root {
+    --primary:#4F46E5; --primary-end:#7C3AED; --screen:#F3F5FA; --card:#FFFFFF;
+    --stroke:#E8ECF5; --tonal:#EEF2FF; --tonal-text:#4338CA; --text:#111827;
+    --sub:#4B5563; --label:#6366F1; --input-stroke:#DFE5F0; --danger:#DC2626;
+  }
+  html[data-theme="emeraude"] { --primary:#059669; --primary-end:#10B981; --screen:#F0FAF7; --stroke:#D9F0E5; --tonal:#D1FAE5; --tonal-text:#065F46; --label:#10B981; --input-stroke:#D5EAE0; }
+  html[data-theme="ocean"]    { --primary:#0284C7; --primary-end:#0EA5E9; --screen:#F0F7FC; --stroke:#D9EAF5; --tonal:#D0EBFC; --tonal-text:#075985; --label:#0EA5E9; --input-stroke:#D5E6F2; }
+  html[data-theme="sunset"]   { --primary:#EA580C; --primary-end:#F59E0B; --screen:#FDF6EF; --stroke:#F5E3D3; --tonal:#FFEDD5; --tonal-text:#9A3412; --label:#F97316; --input-stroke:#F2E0D0; }
+  html[data-theme="sombre"]   { --primary:#6366F1; --primary-end:#818CF8; --screen:#0B1220; --card:#1E293B; --stroke:#334155; --tonal:#273449; --tonal-text:#A5B4FC; --text:#F1F5F9; --sub:#94A3B8; --label:#818CF8; --input-stroke:#334155; }
+
+  * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  body { font-family:-apple-system,'Segoe UI',system-ui,sans-serif; background:var(--screen); color:var(--text); min-height:100vh; padding-bottom:80px; }
+  .hero { background:linear-gradient(135deg,var(--primary),var(--primary-end)); color:#fff; padding:26px 20px 22px; border-radius:0 0 28px 28px; position:sticky; top:0; z-index:10; }
+  .hero h1 { font-size:22px; display:flex; align-items:center; gap:8px; }
+  .hero p { font-size:12.5px; opacity:.85; margin-top:4px; }
+  main { max-width:640px; margin:0 auto; padding:16px 14px 30px; }
+  .tab { display:none; } .tab.active { display:block; }
+
+  .card { background:var(--card); border:1px solid var(--stroke); border-radius:18px; padding:16px; margin-top:14px; box-shadow:0 8px 24px rgba(79,70,229,.05); }
+  .card h2 { font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--label); margin-bottom:10px; }
+
+  label { display:block; font-size:10.5px; font-weight:700; letter-spacing:.08em; color:var(--label); margin:12px 0 5px; text-transform:uppercase; }
+  input { width:100%; padding:12px 13px; border-radius:13px; font-size:15px; border:1px solid var(--input-stroke); background:var(--card); color:var(--text); outline:none; -webkit-appearance:none; }
+  input:focus { border-color:var(--primary); }
+  .searchbar { display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--input-stroke); border-radius:24px; padding:6px 12px; margin-top:14px; box-shadow:0 4px 14px rgba(79,70,229,.07); }
+  .searchbar .icon { font-size:18px; }
+  .searchbar input { border:0; background:transparent; padding:10px 4px; flex:1; }
+  .fab { width:46px; height:46px; min-width:46px; border-radius:50%; border:0; background:linear-gradient(135deg,var(--primary),var(--primary-end)); color:#fff; font-size:19px; box-shadow:0 4px 10px rgba(79,70,229,.3); cursor:pointer; }
+
+  button { font-family:inherit; border:0; border-radius:13px; padding:12px 16px; font-size:14px; font-weight:600; cursor:pointer; }
+  .btn { background:var(--tonal); color:var(--tonal-text); width:100%; margin-top:10px; }
+  .btn-primary { background:linear-gradient(90deg,var(--primary),var(--primary-end)); color:#fff; width:100%; margin-top:16px; padding:14px; font-size:15px; box-shadow:0 6px 16px rgba(79,70,229,.3); }
+  .btn-danger { background:#FEE2E2; color:var(--danger); padding:6px 11px; font-size:12px; border-radius:10px; }
+  .btn-mini { background:var(--tonal); color:var(--tonal-text); padding:6px 11px; font-size:12px; border-radius:10px; }
+
+  .pill { display:flex; align-items:center; gap:8px; background:var(--tonal); color:var(--tonal-text); border-radius:999px; padding:9px 14px; margin-top:14px; font-size:12.5px; line-height:1.5; }
+  .dot { width:8px; height:8px; min-width:8px; border-radius:50%; background:var(--primary); }
+
+  nav { position:fixed; bottom:0; left:0; right:0; display:flex; gap:6px; background:var(--card); padding:8px 10px calc(8px + env(safe-area-inset-bottom)); box-shadow:0 -6px 20px rgba(0,0,0,.08); z-index:20; max-width:640px; margin:0 auto; }
+  nav button { flex:1; background:transparent; color:var(--sub); font-size:10.5px; font-weight:700; display:flex; flex-direction:column; align-items:center; gap:3px; padding:8px 4px; border-radius:14px; }
+  nav button .ico { font-size:19px; }
+  nav button.active { background:var(--tonal); color:var(--tonal-text); }
+
+  .rec { border:1px solid var(--stroke); border-radius:16px; background:var(--card); padding:12px 13px; margin-top:10px; }
+  .rec.best { background:color-mix(in srgb, var(--primary) 9%, var(--card)); border-color:color-mix(in srgb, var(--primary) 40%, var(--stroke)); }
+  .rec .top { display:flex; align-items:center; gap:10px; }
+  .rec .rank { font-size:20px; font-weight:800; color:var(--tonal-text); min-width:24px; text-align:center; }
+  .rec.best .rank { color:var(--primary); }
+  .rec .mid { flex:1; min-width:0; }
+  .rec .store { font-size:15px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .badge { display:inline-block; background:var(--primary); color:#fff; font-size:9px; font-weight:800; letter-spacing:.08em; border-radius:8px; padding:3px 8px; margin-top:4px; }
+  .rec .meta { font-size:11px; color:var(--sub); margin-top:4px; line-height:1.6; }
+  .rec .price { font-size:18px; font-weight:800; color:var(--text); }
+  .rec.best .price { color:var(--primary); }
+  .rec .cur { font-size:10px; color:var(--sub); text-align:right; }
+  .rec .maps { margin-top:8px; }
+
+  .theme-row { display:flex; align-items:center; gap:12px; border:1px solid var(--stroke); border-radius:14px; padding:11px 12px; margin-top:8px; cursor:pointer; background:var(--card); }
+  .theme-row.sel { border-color:var(--primary); }
+  .swatch { width:34px; height:34px; min-width:34px; border-radius:50%; }
+  .theme-row b { font-size:14px; flex:1; }
+  .theme-row .check { color:var(--primary); font-weight:800; }
+
+  .modal { position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:flex-end; justify-content:center; z-index:50; }
+  .modal.open { display:flex; }
+  .sheet { background:var(--card); width:100%; max-width:640px; border-radius:24px 24px 0 0; padding:18px; max-height:82vh; overflow:auto; padding-bottom:calc(18px + env(safe-area-inset-bottom)); }
+  .sheet h3 { font-size:16px; margin-bottom:4px; }
+  .sheet .sub { font-size:12px; color:var(--sub); margin-bottom:12px; }
+  .ocr-line { display:flex; align-items:center; gap:10px; padding:11px 6px; border-bottom:1px solid var(--stroke); font-size:14px; }
+  .ocr-line input { width:20px; height:20px; min-width:20px; accent-color:var(--primary); }
+  #qr-reader { border-radius:14px; overflow:hidden; }
+  .hidden { display:none !important; }
+  .empty { text-align:center; color:var(--sub); font-size:13px; padding:24px; }
+  .spinner { width:22px; height:22px; border:3px solid var(--tonal); border-top-color:var(--primary); border-radius:50%; animation:spin 1s linear infinite; margin:14px auto; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .about { font-size:12.5px; color:var(--tonal-text); background:var(--tonal); border-radius:14px; padding:13px; line-height:1.7; margin-top:14px; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>🛒 Shop-comp</h1>
+  <p>Comparez les prix entre magasins — scan, OCR, cloud</p>
+</div>
+
+<main>
+  <!-- ============ ONGLET ACCUEIL ============ -->
+  <section id="tab-home" class="tab active">
+    <div class="searchbar">
+      <span class="icon">🔍</span>
+      <input id="barcode" placeholder="Scanner ou taper le code-barres" autocomplete="off">
+      <button class="fab" onclick="startScan()" title="Scanner">📷</button>
+    </div>
+    <button class="btn" onclick="pickPhoto()">📝 Remplir par photo (OCR)</button>
+    <input type="file" id="ocr-file" accept="image/*" capture="environment" class="hidden">
+
+    <div class="card">
+      <h2>Produit</h2>
+      <label>Produit</label>
+      <input id="product" placeholder="Nom du produit, ex : Lait 1L" autocomplete="off">
+      <label>Magasin</label>
+      <input id="store" placeholder="Auto par GPS si trouvé" autocomplete="off">
+      <label>Prix (DZD)</label>
+      <input id="price" type="number" inputmode="decimal" step="0.01" min="0" placeholder="Ex : 120">
+    </div>
+
+    <button class="btn-primary" onclick="validate()">✓ Valider · GPS + magasin + envoi</button>
+    <div class="pill"><span class="dot"></span><span id="status">Prêt. Scannez, remplissez, puis validez.</span></div>
+  </section>
+
+  <!-- ============ ONGLET COMPARER ============ -->
+  <section id="tab-compare" class="tab">
+    <div class="card">
+      <h2>Comparer les prix du cloud</h2>
+      <input id="cmp-barcode" placeholder="Code-barres à comparer" autocomplete="off">
+      <button class="btn" onclick="loadCloud(document.getElementById('cmp-barcode').value)">☁ Comparer</button>
+      <button class="btn" onclick="openCheapestMaps()">🗺 Ouvrir le moins cher dans Maps</button>
+    </div>
+    <div id="results"></div>
+  </section>
+
+  <!-- ============ ONGLET REGLAGES ============ -->
+  <section id="tab-settings" class="tab">
+    <div class="card">
+      <h2>Thème</h2>
+      <div id="themes"></div>
+    </div>
+    <div class="card">
+      <h2>Outils</h2>
+      <button class="btn" onclick="fillSample()">✨ Remplir un code-barres d'exemple</button>
+    </div>
+    <div class="about">
+      <b>Shop-comp PWA</b> — version iPhone/Web de l'app Android.<br>
+      📲 iPhone : Safari → bouton <b>Partager</b> → <b>Sur l'écran d'accueil</b>.<br>
+      Fait avec ❤ en Algérie 🇩🇿
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button id="nav-home" class="active" onclick="switchTab('home')"><span class="ico">🏠</span>Accueil</button>
+  <button id="nav-compare" onclick="switchTab('compare')"><span class="ico">📊</span>Comparer</button>
+  <button id="nav-settings" onclick="switchTab('settings')"><span class="ico">⚙️</span>Réglages</button>
+</nav>
+
+<!-- ============ MODAL SCANNER ============ -->
+<div class="modal" id="scan-modal" onclick="if(event.target===this)stopScan()">
+  <div class="sheet">
+    <h3>📷 Scanner le code-barres</h3>
+    <div class="sub">Placez le code dans le cadre</div>
+    <div id="qr-reader"></div>
+    <button class="btn" onclick="stopScan()">Fermer</button>
+  </div>
+</div>
+
+<!-- ============ MODAL OCR MULTI-SELECT ============ -->
+<div class="modal" id="ocr-modal" onclick="if(event.target===this)closeOcr()">
+  <div class="sheet">
+    <h3>📝 Sélectionnez les lignes à utiliser</h3>
+    <div class="sub">Les meilleures lignes sont déjà cochées — ajustez puis validez</div>
+    <div id="ocr-lines"></div>
+    <button class="btn-primary" onclick="applyOcrSelection()">✓ Valider la sélection</button>
+    <button class="btn" onclick="closeOcr()">Annuler</button>
+  </div>
+</div>
+
+<script>
+// ================= FIREBASE =================
+const firebaseConfig = {
+  apiKey: "AIzaSyC7jySALhAqtr6oPzN3ktmeDFffCCYnpK8",
+  authDomain: "shop-comp-a0713.firebaseapp.com",
+  databaseURL: "https://shop-comp-a0713-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "shop-comp-a0713"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const $ = id => document.getElementById(id);
+const setStatus = t => $('status').textContent = t;
+
+// ================= THEMES =================
+const THEMES = {
+  indigo:  { name:'Indigo (défaut)',       start:'#4F46E5', end:'#7C3AED' },
+  emeraude:{ name:'Émeraude (vert)',       start:'#047857', end:'#10B981' },
+  ocean:   { name:'Océan (bleu)',          start:'#0369A1', end:'#0EA5E9' },
+  sunset:  { name:'Sunset (orange)',       start:'#C2410C', end:'#F59E0B' },
+  sombre:  { name:'Mode sombre (nuit)',    start:'#1E293B', end:'#0F172A' }
+};
+function applyTheme(key) {
+  localStorage.setItem('shopcomp-theme', key);
+  document.documentElement.setAttribute('data-theme', key === 'indigo' ? '' : key);
+  document.querySelector('meta[name=theme-color]').content = THEMES[key].start;
+  renderThemes();
+}
+function renderThemes() {
+  const cur = localStorage.getItem('shopcomp-theme') || 'indigo';
+  $('themes').innerHTML = Object.keys(THEMES).map(k => `
+    <div class="theme-row ${k===cur?'sel':''}" onclick="applyTheme('${k}')">
+      <div class="swatch" style="background:linear-gradient(135deg,${THEMES[k].start},${THEMES[k].end})"></div>
+      <b>${THEMES[k].name}</b>
+      ${k===cur?'<span class="check">✓</span>':''}
+    </div>`).join('');
+}
+applyTheme(localStorage.getItem('shopcomp-theme') || 'indigo');
+
+// ================= ONGLETS =================
+function switchTab(name) {
+  ['home','compare','settings'].forEach(t => {
+    $('tab-'+t).classList.toggle('active', t === name);
+    $('nav-'+t).classList.toggle('active', t === name);
+  });
+  window.scrollTo(0, 0);
+}
+
+// ================= SCAN CODE-BARRES =================
+let scanner = null;
+async function startScan() {
+  $('scan-modal').classList.add('open');
+  try {
+    scanner = new Html5Qrcode('qr-reader');
+    await scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 240 },
+      code => { stopScan(); onBarcodeKnown(code); }, () => {});
+  } catch (e) {
+    $('qr-reader').innerHTML = '<div class="empty">❌ Caméra indisponible.<br>Vérifiez que le site est en HTTPS et que vous avez autorisé la caméra.<br>Vous pouvez taper le code manuellement.</div>';
+  }
+}
+async function stopScan() {
+  try { if (scanner) { await scanner.stop(); scanner.clear(); } } catch (e) {}
+  scanner = null;
+  $('scan-modal').classList.remove('open');
+}
+
+// ================= REMPLISSAGE AUTO DU NOM =================
+function safeKey(v) { return String(v).replace(/[.#$/[\]/]/g, '_'); }
+function onBarcodeKnown(code) {
+  $('barcode').value = code;
+  autoFillName(code);
+}
+function autoFillName(barcode) {
+  barcode = String(barcode || '').trim();
+  if (!barcode) return;
+  db.ref('prices_by_barcode/' + safeKey(barcode)).limitToFirst(1).once('value')
+    .then(snap => {
+      snap.forEach(child => {
+        const p = child.child('product').val();
+        if (p && String(p).trim() && p !== 'Unknown product' && !$('product').value.trim()) {
+          $('product').value = p;
+          setStatus('Nom rempli automatiquement depuis le cloud : ' + p);
+        }
+      });
+    }).catch(() => {});
+}
+$('barcode').addEventListener('blur', () => autoFillName($('barcode').value));
+
+// ================= OCR MULTI-SELECT =================
+let ocrLines = [];
+function pickPhoto() {
+  const f = $('ocr-file'); f.value = ''; f.click();
+}
+$('ocr-file').addEventListener('change', async ev => {
+  const file = ev.target.files[0];
+  if (!file) return;
+  setStatus('Lecture de la photo en cours (OCR)…');
+  if (!window.Tesseract) {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    document.head.appendChild(s);
+    await new Promise(r => s.onload = r);
+  }
+  try {
+    const res = await Tesseract.recognize(file, 'eng');
+    ocrLines = (res.data.lines || []).map(l => (l.text || '').trim()).filter(t => t).slice(0, 25);
+  } catch (e) { setStatus("Impossible de lire la photo : " + e.message); return; }
+  if (!ocrLines.length) { setStatus('Aucun texte trouvé. Réessayez : photo nette, près de l\'étiquette, bonne lumière.'); return; }
+
+  const checked = new Array(ocrLines.length).fill(false);
+  smartSelect(ocrLines, checked);
+  $('ocr-lines').innerHTML = ocrLines.map((t, i) =>
+    `<label class="ocr-line"><input type="checkbox" data-i="${i}" ${checked[i]?'checked':''}><span>${t.replace(/</g,'&lt;')}</span></label>`).join('');
+  $('ocr-modal').classList.add('open');
+  setStatus(ocrLines.length + ' lignes détectées. Sélectionnez puis validez.');
+});
+function isBarcodeLine(t) { const d = t.replace(/[^0-9]/g,''); return d.length>=8 && d.length<=14 && /^[0-9 ]{8,20}$/.test(t); }
+function priceCandidate(t) { const m = t.trim().match(/^(\d{1,5}(?:[.,]\d{1,2})?)\s*(dzd|da|د\.?ج)?$/i); return m ? m[1].replace(',','.') : null; }
+function smartSelect(lines, checked) {
+  let bi=-1, pi=-1, ni=-1, best=2;
+  lines.forEach((t,i) => {
+    if (bi<0 && isBarcodeLine(t)) { bi=i; return; }
+    if (pi<0 && priceCandidate(t)) { pi=i; return; }
+    let letters=[...t].filter(c=>c.toLowerCase()!==c.toUpperCase()||c.charCodeAt(0)>0x600).length;
+    if (letters>best && t.length<=40) { best=letters; ni=i; }
+  });
+  if (bi>=0) checked[bi]=true;
+  if (pi>=0) checked[pi]=true;
+  if (ni>=0) checked[ni]=true;
+}
+function applyOcrSelection() {
+  const boxes = [...document.querySelectorAll('#ocr-lines input')];
+  let any = boxes.some(b => b.checked);
+  if (!any) { const arr = new Array(ocrLines.length).fill(false); smartSelect(ocrLines, arr); boxes.forEach((b,i)=>b.checked=arr[i]); }
+  let name=[], barcode=null, price=null;
+  boxes.forEach((b,i) => {
+    if (!b.checked) return;
+    const t = ocrLines[i];
+    if (barcode===null && isBarcodeLine(t)) { barcode = t.replace(/[^0-9]/g,''); }
+    else if (price===null && priceCandidate(t)) { price = priceCandidate(t); }
+    else name.push(t);
+  });
+  if (barcode) $('barcode').value = barcode;
+  if (price) $('price').value = price;
+  if (name.length) $('product').value = name.join(' ');
+  closeOcr();
+  let s = 'Rempli depuis la photo :';
+  if (barcode) s += ' • code-barres ' + barcode;
+  if (name.length) s += ' • produit "' + name.join(' ') + '"';
+  if (price) s += ' • prix ' + price;
+  setStatus(s + ' — vérifiez puis validez.');
+  if (barcode) autoFillName(barcode);
+}
+function closeOcr() { $('ocr-modal').classList.remove('open'); }
+
+// ================= GPS + NOM DE MAGASIN (OpenStreetMap) =================
+function getGps() {
+  return new Promise(resolve => {
+    if (!navigator.geolocation) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      p => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
+  });
+}
+async function osmStoreName(lat, lng) {
+  const q = `[out:json][timeout:12];(node(around:150,${lat},${lng})["shop"];way(around:150,${lat},${lng})["shop"];node(around:150,${lat},${lng})["amenity"~"marketplace|pharmacy|fuel"];);out center tags 20;`;
+  try {
+    const r = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'data=' + encodeURIComponent(q)
+    });
+    const j = await r.json();
+    let best = null, bestD = Infinity;
+    (j.elements || []).forEach(el => {
+      const t = el.tags || {};
+      const name = t.name || t.brand || t.operator || '';
+      if (!name) return;
+      const elat = el.lat || (el.center && el.center.lat), elng = el.lon || (el.center && el.center.lon);
+      if (elat == null) return;
+      const d = (elat-lat)**2 + (elng-lng)**2;
+      if (d < bestD) { bestD = d; best = name; }
+    });
+    return best;
+  } catch (e) { return null; }
+}
+
+// ================= VALIDER =================
+async function validate() {
+  const barcode = $('barcode').value.trim();
+  let product = $('product').value.trim();
+  const store = $('store').value.trim();
+  const price = parseFloat($('price').value);
+  if (!barcode) { setStatus('⚠️ Scannez ou tapez le code-barres d\'abord.'); return; }
+  if (!product) product = 'Unknown product';
+  if (isNaN(price) || price < 0 || price > 1000000) { setStatus('⚠️ Prix invalide.'); return; }
+
+  setStatus('📍 Obtention du GPS…');
+  const gps = await getGps();
+  let storeName = store;
+  if (!storeName && gps) {
+    setStatus('🔎 Recherche du magasin sur OpenStreetMap…');
+    storeName = await osmStoreName(gps.lat, gps.lng) || '';
+  }
+
+  const record = {
+    barcode, product,
+    store: storeName || 'Magasin inconnu',
+    price, currency: 'DZD',
+    has_gps: !!gps, lat: gps ? gps.lat : 0, lng: gps ? gps.lng : 0,
+    created_at: new Date().toLocaleString('fr-FR')
+  };
+
+  setStatus('☁️ Envoi vers le cloud…');
+  try {
+    await db.ref('prices_by_barcode/' + safeKey(barcode)).push(record);
+    setStatus(gps ? '✅ Prix enregistré ! (GPS capturé)' : '✅ Prix enregistré ! (sans GPS)');
+    $('cmp-barcode').value = barcode;
+    await loadCloud(barcode);
+  } catch (e) {
+    setStatus('❌ Erreur d\'envoi : ' + e.message);
+  }
+}
+
+// ================= RESULTATS =================
+let lastRecords = [];
+async function loadCloud(barcode) {
+  barcode = String(barcode || '').trim();
+  if (!barcode) { setStatus('⚠️ Entrez un code-barres.'); switchTab('compare'); return; }
+  $('results').innerHTML = '<div class="spinner"></div>';
+  switchTab('compare');
+  try {
+    const snap = await db.ref('prices_by_barcode/' + safeKey(barcode)).once('value');
+    const val = snap.val() || {};
+    lastRecords = Object.keys(val).map(k => val[k]);
+    lastRecords.sort((a, b) => (a.price || 0) - (b.price || 0));
+    if (!$('product').value.trim()) {
+      const p = (lastRecords.find(r => r.product && r.product !== 'Unknown product') || {}).product;
+      if (p) $('product').value = p;
+    }
+    renderResults(barcode);
+  } catch (e) {
+    $('results').innerHTML = '<div class="empty">❌ ' + e.message + '</div>';
+  }
+}
+function renderResults(barcode) {
+  if (!lastRecords.length) {
+    $('results').innerHTML = '<div class="empty">Aucun prix partagé pour ' + barcode.replace(/</g,'&lt;') + '.<br>Ajoutez-en un puis validez !</div>';
+    return;
+  }
+  $('results').innerHTML = lastRecords.map((r, i) => `
+    <div class="rec ${i===0?'best':''}">
+      <div class="top">
+        <div class="rank">${i+1}</div>
+        <div class="mid">
+          <div class="store">${esc(r.store || '—')}</div>
+          ${i===0?'<span class="badge">🏆 MEILLEUR PRIX</span>':''}
+          <div class="meta">${esc(r.product || '—')}<br>${esc(r.created_at || '')}</div>
+        </div>
+        <div>
+          <div class="price">${Number(r.price || 0).toFixed(2)}</div>
+          <div class="cur">${esc(r.currency || 'DZD')}${r.has_gps ? ' · 📍' : ''}</div>
+        </div>
+      </div>
+      ${r.has_gps ? `<div class="maps"><button class="btn-mini" onclick="openMaps(${r.lat},${r.lng},'${esc(r.store||'')}')">🗺 Ouvrir dans Maps</button></div>` : ''}
+    </div>`).join('');
+}
+function openMaps(lat, lng, name) {
+  window.open('https://www.google.com/maps/search/?api=1&query=' + lat + ',' + lng, '_blank');
+}
+function openCheapestMaps() {
+  const r = lastRecords.find(x => x.has_gps);
+  if (!r) { setStatus('⚠️ Aucun prix avec GPS chargé. Faites d\'abord une comparaison.'); switchTab('compare'); return; }
+  openMaps(r.lat, r.lng, r.store);
+}
+function fillSample() {
+  switchTab('home');
+  $('barcode').value = '6111000000010';
+  $('product').value = 'Lait 1L';
+  $('price').value = '120';
+  setStatus('Exemple rempli. Appuyez sur Valider pour tester !');
+}
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ================= SERVICE WORKER =================
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
